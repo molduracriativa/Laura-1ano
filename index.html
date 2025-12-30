@@ -3,53 +3,81 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Câmera Customizada - Molduras Estáticas</title>
+<title>Câmera com Capa e Moldura</title>
 
 <style>
 :root {
-    --accent: #25D366;
-    --record: #ff0000;
+    --accent:#25D366;
 }
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { box-sizing:border-box; }
 
 body {
-    margin: 0;
-    background: #000;
-    color: #fff;
-    overflow: hidden;
-    width: 100vw;
-    height: 100dvh;
-    font-family: sans-serif;
+    margin:0;
+    background:#000;
+    overflow:hidden;
+    width:100vw;
+    height:100dvh;
+    font-family:sans-serif;
 }
 
-.frame, .stage {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+/* ===== CAPA ===== */
+#startScreen {
+    position:fixed;
+    inset:0;
+    background:url("capajpg.jpg") center/cover no-repeat;
+    z-index:20;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding:40px;
 }
 
-video, canvas, img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+#startBtn {
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    padding:14px 28px;
+    font-size:16px;
+    border-radius:30px;
 }
 
-#camera.mirrored { transform: scaleX(-1); }
+/* ===== CAMERA ===== */
+.frame,.stage {
+    position:relative;
+    width:100%;
+    height:100%;
+}
 
-#canvasPreview { z-index: 3; }
+video,canvas,img {
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+#camera { background:#000; }
+#camera.mirrored { transform:scaleX(-1); }
+
+#canvasPreview { z-index:3; }
 #molduraImagePreview {
-    z-index: 5;
-    pointer-events: none;
+    z-index:5;
+    pointer-events:none;
+    display:none;
 }
-#canvasFinal { display: none; }
+
+#canvasFinal { display:none; }
 </style>
 </head>
 
 <body>
 
+<!-- CAPA -->
+<div id="startScreen">
+    <button id="startBtn">Iniciar</button>
+</div>
+
+<!-- CAMERA -->
 <div class="frame">
 <div class="stage">
 
@@ -62,158 +90,134 @@ video, canvas, img {
 </div>
 
 <script>
-// ================= CONFIGURAÇÕES DE QUALIDADE =================
 const DPR = window.devicePixelRatio || 1;
-const PHOTO_W = 1080;
-const PHOTO_H = 1920;
-const VIDEO_W = 1080;
-const VIDEO_H = 1920;
+const PHOTO_W = 1080, PHOTO_H = 1920;
+const VIDEO_W = 1080, VIDEO_H = 1920;
 
-// ================= VARIÁVEIS =================
-let stream = null;
-let mediaRecorder = null;
-let recordedChunks = [];
-let isRecording = false;
-let usingFrontCamera = true;
+let stream=null, isRecording=false, mediaRecorder, recordedChunks=[];
+let usingFrontCamera=true;
 
-// ================= ELEMENTOS =================
 const video = document.getElementById('camera');
 const canvasPreview = document.getElementById('canvasPreview');
 const ctxPreview = canvasPreview.getContext('2d');
 const canvasFinal = document.getElementById('canvasFinal');
-const ctxFinal = canvasFinal.getContext('2d', { alpha:false });
+const ctxFinal = canvasFinal.getContext('2d');
 const moldura = document.getElementById('molduraImagePreview');
+const startScreen = document.getElementById('startScreen');
 
-// ================= QUALIDADE DE DESENHO =================
 ctxPreview.imageSmoothingEnabled = true;
-ctxPreview.imageSmoothingQuality = 'high';
+ctxPreview.imageSmoothingQuality = "high";
 ctxFinal.imageSmoothingEnabled = true;
-ctxFinal.imageSmoothingQuality = 'high';
+ctxFinal.imageSmoothingQuality = "high";
 
-// ================= CAMERA =================
-async function initCamera() {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-
+/* ===== CAMERA ===== */
+async function initCamera(){
     stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-            facingMode: usingFrontCamera ? 'user' : 'environment',
-            width: { ideal: 3840 },
-            height: { ideal: 2160 }
+        video:{
+            facingMode: usingFrontCamera ? "user":"environment",
+            width:{ideal:3840},
+            height:{ideal:2160}
         },
-        audio: true
+        audio:true
     });
-
     video.srcObject = stream;
     video.play();
-
     resizePreview();
     previewLoop();
 }
 
-function resizePreview() {
+function resizePreview(){
     canvasPreview.width = innerWidth * DPR;
     canvasPreview.height = innerHeight * DPR;
-    ctxPreview.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctxPreview.setTransform(DPR,0,0,DPR,0,0);
 }
+window.addEventListener("resize", resizePreview);
 
-window.addEventListener('resize', resizePreview);
-
-// ================= DESENHO BASE =================
-function draw(ctx, w, h) {
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    if (!vw || !vh) return;
-
-    ctx.clearRect(0, 0, w, h);
+/* ===== DESENHO ===== */
+function draw(ctx,w,h){
+    if(!video.videoWidth) return;
+    const vw=video.videoWidth, vh=video.videoHeight;
+    ctx.clearRect(0,0,w,h);
     ctx.save();
-    ctx.translate(w / 2, h / 2);
-    if (usingFrontCamera) ctx.scale(-1, 1);
+    ctx.translate(w/2,h/2);
+    if(usingFrontCamera) ctx.scale(-1,1);
 
-    const ratio = vw / vh;
-    let dw = w;
-    let dh = w / ratio;
-    if (dh < h) {
-        dh = h;
-        dw = h * ratio;
-    }
-
-    ctx.drawImage(video, -dw / 2, -dh / 2, dw, dh);
+    const r=vw/vh;
+    let dw=w, dh=w/r;
+    if(dh<h){ dh=h; dw=h*r; }
+    ctx.drawImage(video,-dw/2,-dh/2,dw,dh);
     ctx.restore();
-
-    ctx.drawImage(moldura, 0, 0, w, h);
+    ctx.drawImage(moldura,0,0,w,h);
 }
 
-// ================= PREVIEW EM TEMPO REAL =================
-function previewLoop() {
-    draw(ctxPreview, innerWidth, innerHeight);
+function previewLoop(){
+    draw(ctxPreview,innerWidth,innerHeight);
     requestAnimationFrame(previewLoop);
 }
 
-// ================= FOTO =================
-function takePhoto() {
-    canvasFinal.width = PHOTO_W * DPR;
-    canvasFinal.height = PHOTO_H * DPR;
-    ctxFinal.setTransform(DPR, 0, 0, DPR, 0, 0);
-
-    draw(ctxFinal, PHOTO_W, PHOTO_H);
-
-    canvasFinal.toBlob(blob => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'foto.png';
+/* ===== FOTO ===== */
+function takePhoto(){
+    canvasFinal.width = PHOTO_W*DPR;
+    canvasFinal.height = PHOTO_H*DPR;
+    ctxFinal.setTransform(DPR,0,0,DPR,0,0);
+    draw(ctxFinal,PHOTO_W,PHOTO_H);
+    canvasFinal.toBlob(b=>{
+        const a=document.createElement("a");
+        a.href=URL.createObjectURL(b);
+        a.download="foto.png";
         a.click();
-    }, 'image/png', 1);
+    },"image/png",1);
 }
 
-// ================= VÍDEO =================
-function startVideo() {
-    if (isRecording) return;
-    isRecording = true;
-    recordedChunks = [];
+/* ===== VIDEO ===== */
+function startVideo(){
+    isRecording=true;
+    recordedChunks=[];
+    canvasFinal.width = VIDEO_W*DPR;
+    canvasFinal.height = VIDEO_H*DPR;
+    ctxFinal.setTransform(DPR,0,0,DPR,0,0);
 
-    canvasFinal.width = VIDEO_W * DPR;
-    canvasFinal.height = VIDEO_H * DPR;
-    ctxFinal.setTransform(DPR, 0, 0, DPR, 0, 0);
-
-    function loop() {
-        if (!isRecording) return;
-        draw(ctxFinal, VIDEO_W, VIDEO_H);
+    function loop(){
+        if(!isRecording) return;
+        draw(ctxFinal,VIDEO_W,VIDEO_H);
         requestAnimationFrame(loop);
     }
     loop();
 
-    const canvasStream = canvasFinal.captureStream(30);
-    stream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
+    const cs = canvasFinal.captureStream(30);
+    stream.getAudioTracks().forEach(t=>cs.addTrack(t));
 
-    mediaRecorder = new MediaRecorder(canvasStream, {
-        mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 8_000_000
+    mediaRecorder = new MediaRecorder(cs,{
+        mimeType:"video/webm;codecs=vp9",
+        videoBitsPerSecond:8000000
     });
 
-    mediaRecorder.ondataavailable = e => recordedChunks.push(e.data);
-    mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'video.webm';
+    mediaRecorder.ondataavailable=e=>recordedChunks.push(e.data);
+    mediaRecorder.onstop=()=>{
+        const blob=new Blob(recordedChunks,{type:"video/webm"});
+        const a=document.createElement("a");
+        a.href=URL.createObjectURL(blob);
+        a.download="video.webm";
         a.click();
     };
-
     mediaRecorder.start();
 }
 
-function stopVideo() {
-    isRecording = false;
-    if (mediaRecorder) mediaRecorder.stop();
+function stopVideo(){
+    isRecording=false;
+    mediaRecorder.stop();
 }
 
-// ================= INICIAR =================
-initCamera();
+/* ===== INICIAR ===== */
+document.getElementById("startBtn").onclick = async ()=>{
+    startScreen.style.display="none";
+    moldura.style.display="block";
+    await initCamera();
+};
 
-// Expondo funções caso você já use botões externos
-window.takePhoto = takePhoto;
-window.startVideo = startVideo;
-window.stopVideo = stopVideo;
+window.takePhoto=takePhoto;
+window.startVideo=startVideo;
+window.stopVideo=stopVideo;
 </script>
 
 </body>
