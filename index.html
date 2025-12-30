@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <title>Câmera HD Pro - Captura Real</title>
+    <title>Câmera Pro - Fluidez HD</title>
     <style>
         :root { --accent: #25D366; --record: #ff0000; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -54,7 +54,6 @@
         .btn-video.recording { border-color: var(--record); background: rgba(255,0,0,0.3); }
         .stop-square { width: 30px; height: 30px; background: red; border-radius: 4px; }
 
-        /* TELA INICIAL CENTRALIZADA */
         #startScreen {
             position: absolute; inset: 0; background: #000;
             background-image: url('capajpg.jpg'); background-size: cover; background-position: center;
@@ -66,7 +65,6 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* RESULTADO */
         #resultUI { 
             position: absolute; inset: 0; display: none; flex-direction: column; 
             align-items: center; justify-content: flex-end; padding-bottom: 50px; 
@@ -124,7 +122,8 @@ let currentFileUrl = null;
 
 const video = document.getElementById('camera');
 const canvasFinal = document.getElementById('canvasFinal');
-const ctxFinal = canvasFinal.getContext('2d', { alpha: false });
+// 🔥 Otimização: Desynchronized ajuda na fluidez do Canvas
+const ctxFinal = canvasFinal.getContext('2d', { alpha: false, desynchronized: true });
 const molduraImg = document.getElementById('molduraImagePreview');
 
 document.getElementById('startBtn').onclick = () => initCamera();
@@ -135,18 +134,11 @@ document.getElementById('newPhotoBtn').onclick = resetCamera;
 
 async function initCamera() {
     if (stream) stream.getTracks().forEach(t => t.stop());
-
-    const constraints = {
-        video: { 
-            facingMode: usingFrontCamera ? 'user' : 'environment',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-        },
-        audio: true
-    };
-
     try {
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: usingFrontCamera ? 'user' : 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: true
+        });
         video.srcObject = stream;
         video.onloadedmetadata = () => {
             video.play();
@@ -156,13 +148,12 @@ async function initCamera() {
             molduraImg.style.display = 'block';
             video.classList.toggle('mirrored', usingFrontCamera);
         };
-    } catch (e) { alert("Acesso à câmera negado."); }
+    } catch (e) { alert("Erro ao acessar câmera."); }
 }
 
 function drawFrame(ctx, w, h) {
-    ctx.clearRect(0, 0, w, h);
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingQuality = 'medium'; // Médio garante fluidez sem perder muita nitidez
     
     ctx.save();
     if (usingFrontCamera) {
@@ -182,10 +173,8 @@ function drawFrame(ctx, w, h) {
         offsetY = (h - dH) / 2;
     }
 
-    ctx.filter = 'contrast(1.05) saturate(1.1)';
     ctx.drawImage(video, offsetX, offsetY, dW, dH);
     ctx.restore();
-    ctx.filter = 'none';
 
     if (molduraImg.complete) ctx.drawImage(molduraImg, 0, 0, w, h);
 }
@@ -193,15 +182,15 @@ function drawFrame(ctx, w, h) {
 function takePhoto() {
     canvasFinal.width = 1080;
     canvasFinal.height = 1920;
+    // Para foto, usamos qualidade máxima pois é um único frame
+    ctxFinal.imageSmoothingQuality = 'high';
     drawFrame(ctxFinal, 1080, 1920);
 
-    // Limpa URL antiga da memória antes de criar nova
     if (currentFileUrl) URL.revokeObjectURL(currentFileUrl);
-
     canvasFinal.toBlob(blob => {
         currentFileUrl = URL.createObjectURL(blob);
         showResult(currentFileUrl, 'image');
-    }, 'image/png', 1.0);
+    }, 'image/png', 0.95);
 }
 
 function startRecording() {
@@ -213,7 +202,8 @@ function startRecording() {
     document.getElementById('recordingTimer').style.display = 'block';
     recordingStartTime = Date.now();
 
-    canvasFinal.width = 720; // 720p para gravação fluida
+    // 🔥 Otimização: Vídeo em 720p para evitar travamentos
+    canvasFinal.width = 720;
     canvasFinal.height = 1280;
 
     const recordingLoop = () => {
@@ -224,12 +214,17 @@ function startRecording() {
     };
     recordingLoop();
 
-    const canvasStream = canvasFinal.captureStream(30);
+    const canvasStream = canvasFinal.captureStream(24); // 24 FPS é mais estável para web
     if (stream.getAudioTracks().length > 0) canvasStream.addTrack(stream.getAudioTracks()[0]);
 
+    // 🔥 Escolha de codec mais leve (H264 / AVC)
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=h264') 
+                     ? 'video/webm;codecs=h264' 
+                     : 'video/webm';
+
     mediaRecorder = new MediaRecorder(canvasStream, { 
-        mimeType: 'video/webm;codecs=vp9', 
-        videoBitsPerSecond: 8000000 
+        mimeType: mimeType,
+        videoBitsPerSecond: 4000000 // 4Mbps é excelente e não trava
     });
 
     mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
