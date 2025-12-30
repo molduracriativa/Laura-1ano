@@ -3,17 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Câmera Customizada - Alta Qualidade</title>
+<title>Câmera Customizada - Pré-carregamento</title>
 
 <style>
-:root{
-    --accent:#25D366;
-    --record:#ff0000;
-}
+:root{--accent:#25D366;--record:#ff0000}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{
     margin:0;background:#000;color:#fff;overflow:hidden;
-    width:100vw;height:100dvh;font-family:sans-serif;
+    width:100vw;height:100dvh;font-family:sans-serif
 }
 .frame,.stage{width:100%;height:100%;position:relative}
 .stage{overflow:hidden;background:#111}
@@ -21,7 +18,7 @@ body{
 #camera{
     position:absolute;inset:0;
     width:100%;height:100%;
-    object-fit:cover;background:#000;
+    object-fit:cover;background:#000
 }
 #camera.mirrored{transform:scaleX(-1)}
 
@@ -29,7 +26,7 @@ body{
     position:absolute;inset:0;
     width:100%;height:100%;
     object-fit:contain;
-    display:none;z-index:6;background:#000;
+    display:none;z-index:6;background:#000
 }
 
 #molduraImagePreview{
@@ -39,50 +36,37 @@ body{
     object-position:bottom;
     pointer-events:none;
     z-index:5;
-    display:none;
+    opacity:1;
 }
 
 #canvasFinal{display:none}
 
 .ui-layer{
-    position:absolute;inset:0;
-    z-index:20;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-    padding:20px;
-    pointer-events:none;
+    position:absolute;inset:0;z-index:20;
+    display:flex;flex-direction:column;
+    justify-content:space-between;padding:20px;
+    pointer-events:none
 }
 
-.top-bar{
-    display:flex;
-    justify-content:space-between;
-    pointer-events:auto;
-}
+.top-bar{display:flex;justify-content:space-between;pointer-events:auto}
 
 .timer-badge{
     background:var(--record);
-    padding:5px 12px;
-    border-radius:12px;
-    font-weight:bold;
-    display:none;
+    padding:5px 12px;border-radius:12px;
+    font-weight:bold;display:none
 }
 
 .controls-bottom{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:30px;
-    pointer-events:auto;
+    display:flex;flex-direction:column;
+    align-items:center;gap:30px;
+    pointer-events:auto
 }
 
 .btn{
-    padding:10px 16px;
-    border-radius:20px;
+    padding:10px 16px;border-radius:20px;
     background:rgba(0,0,0,.6);
     border:2px solid rgba(255,255,255,.3);
-    color:#fff;
-    font-weight:600;
+    color:#fff;font-weight:600
 }
 
 .btn-frame{border-color:var(--accent)}
@@ -90,57 +74,43 @@ body{
 .capture-controls{display:flex;gap:20px}
 
 .action-btn-mini{
-    width:50px;height:50px;
-    border-radius:50%;
-    border:2px solid #fff;
-    background:rgba(255,255,255,.2);
-    font-size:22px;
+    width:50px;height:50px;border-radius:50%;
+    border:2px solid #fff;background:rgba(255,255,255,.2);
+    font-size:22px
 }
 
 .action-btn-large{
-    width:80px;height:80px;
-    border-radius:50%;
-    border:4px solid #fff;
-    background:rgba(255,255,255,.2);
+    width:80px;height:80px;border-radius:50%;
+    border:4px solid #fff;background:rgba(255,255,255,.2)
 }
 
 .action-btn-large.recording{
     border-color:var(--record);
-    background:rgba(255,0,0,.5);
+    background:rgba(255,0,0,.5)
 }
 
 #startScreen{
     position:absolute;inset:0;
     background:url('capajpg.jpg') center/cover no-repeat;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    z-index:50;
-    text-align:center;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    z-index:50;text-align:center
 }
 
 #startBtn{
-    padding:18px 32px;
-    font-size:20px;
-    border:none;
-    border-radius:50px;
-    background:#FF5722;
-    color:#fff;
+    padding:18px 32px;font-size:20px;
+    border:none;border-radius:50px;
+    background:#FF5722;color:#fff
 }
 
 #resultUI .actions{
-    display:none;
-    flex-direction:column;
-    gap:12px;
-    pointer-events:auto;
+    display:none;flex-direction:column;
+    gap:12px;pointer-events:auto
 }
 
 .action-btn{
-    padding:14px;
-    border-radius:12px;
-    border:none;
-    font-size:16px;
+    padding:14px;border-radius:12px;
+    border:none;font-size:16px
 }
 
 .btn-save{background:var(--accent)}
@@ -148,10 +118,8 @@ body{
 
 .flash{
     position:absolute;inset:0;
-    background:#fff;
-    opacity:0;
-    pointer-events:none;
-    z-index:10;
+    background:#fff;opacity:0;
+    pointer-events:none;z-index:10
 }
 </style>
 </head>
@@ -166,6 +134,7 @@ body{
 <canvas id="canvasFinal"></canvas>
 <video id="videoPreview" playsinline controls></video>
 
+<!-- MOLDURA JÁ VISÍVEL DESDE O INÍCIO -->
 <img id="molduraImagePreview" src="moldura1.png" alt="Moldura">
 
 <div class="flash" id="flash"></div>
@@ -198,7 +167,7 @@ body{
 <div id="startScreen">
     <h2>Configuração de Câmera</h2>
     <p>Permita acesso para iniciar</p>
-    <button id="startBtn">INICIAR</button>
+    <button id="startBtn" disabled>Carregando…</button>
     <p id="errorMsg" style="color:red"></p>
 </div>
 
@@ -213,10 +182,22 @@ const ctx=canvasFinal.getContext('2d');
 const preview=document.getElementById('canvasPreview');
 const pctx=preview.getContext('2d');
 
+const molduraImg=document.getElementById('molduraImagePreview');
+const startBtn=document.getElementById('startBtn');
+
+/* 🔥 PRÉ-CARREGAMENTO REAL DA MOLDURA */
+const preloadMoldura=new Image();
+preloadMoldura.src='moldura1.png';
+preloadMoldura.onload=()=>{
+    molduraImg.src=preloadMoldura.src;
+    startBtn.disabled=false;
+    startBtn.innerText='INICIAR';
+};
+
 startBtn.onclick=()=>initCamera(true);
 switchBtn.onclick=()=>{usingFrontCamera=!usingFrontCamera;initCamera(true)};
 capturePhotoBtn.onclick=takePhoto;
-captureVideoBtn.onclick=()=>isRecording?stopRec():startRec;
+captureVideoBtn.onclick=()=>isRecording?stopRec():startRec();
 newPhotoBtn.onclick=reset;
 
 async function initCamera(audio){
@@ -235,7 +216,6 @@ async function initCamera(audio){
         video.play();
         startScreen.style.display='none';
         cameraUI.style.display='flex';
-        molduraImagePreview.style.display='block';
     }catch{
         errorMsg.innerText='Erro ao acessar câmera';
     }
@@ -247,8 +227,7 @@ function takePhoto(){
     canvasFinal.height=H*DPR;
     ctx.setTransform(DPR,0,0,DPR,0,0);
     draw(W,H);
-    preview.width=W;
-    preview.height=H;
+    preview.width=W;preview.height=H;
     pctx.drawImage(canvasFinal,0,0,W,H);
     canvasFinal.toBlob(b=>show('image',b),'image/png',1);
 }
@@ -310,10 +289,9 @@ function draw(w,h){
     ctx.drawImage(video,-dw/2,-dh/2,dw,dh);
     ctx.restore();
 
-    const img=molduraImagePreview;
-    const ir=img.naturalWidth/img.naturalHeight;
+    const ir=molduraImg.naturalWidth/molduraImg.naturalHeight;
     const ih=w/ir;
-    ctx.drawImage(img,0,h-ih,w,ih);
+    ctx.drawImage(molduraImg,0,h-ih,w,ih);
 }
 
 function updateTimer(){
@@ -326,7 +304,7 @@ function updateTimer(){
 
 function show(type,blob){
     camera.style.display='none';
-    molduraImagePreview.style.display='none';
+    molduraImg.style.display='none';
     cameraUI.style.display='none';
     resultUI.style.display='flex';
     resultUI.querySelector('.actions').style.display='flex';
@@ -349,7 +327,7 @@ function show(type,blob){
 
 function reset(){
     camera.style.display='block';
-    molduraImagePreview.style.display='block';
+    molduraImg.style.display='block';
     preview.style.display='none';
     videoPreview.style.display='none';
     resultUI.style.display='none';
